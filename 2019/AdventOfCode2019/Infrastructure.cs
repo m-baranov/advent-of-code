@@ -81,7 +81,7 @@ namespace AdventOfCode2019
     public static class Input
     {
         private static readonly HttpClient HttpClient = new HttpClient();
-        private const string HttpSession = "53616c746564...";
+        private const string HttpSession = "53616c7465645f5f3b91380405873077b4f8fdfd5c44395de516272fcf2d9203b5ac06aed1864286a5b6961da895ea09";
 
         public static IInput Literal(params string[] lines) => new LiteralInput(lines);
 

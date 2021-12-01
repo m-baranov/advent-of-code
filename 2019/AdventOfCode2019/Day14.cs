@@ -87,54 +87,9 @@ namespace AdventOfCode2019
             {
                 var reactions = input.Lines().Select(Reaction.Parse).ToList();
 
-                var needed = new ChecmicalList();
-                needed.Add(new Quantity("FUEL", 1));
-
-                var excesses = new ChecmicalList();
-
-                var oreAmount = 0L;
-
-                while (!needed.Empty())
-                {
-                    var need = needed.Pop();
-
-                    if (need.Chemical == "ORE")
-                    {
-                        oreAmount += need.Amount;
-                        continue;
-                    }
-
-                    var needAmount = need.Amount;
-
-                    var excess = excesses.Find(need.Chemical);
-                    if (excess != null)
-                    {
-                        var excessAmount = Math.Min(excess.Amount, needAmount);
-
-                        needAmount -= excessAmount;
-                        excesses.Sub(new Quantity(excess.Chemical, excessAmount));
-                    }
-
-                    if (needAmount > 0)
-                    {
-                        var reaction = reactions.FirstOrDefault(r => r.Produced.Chemical == need.Chemical);
-                        var reactionFactor = (long)Math.Ceiling((double)needAmount / reaction.Produced.Amount);
-
-                        foreach (var req in reaction.Required)
-                        {
-                            needed.Add(new Quantity(req.Chemical, req.Amount * reactionFactor));
-                        }
-
-                        var extraAmount = reaction.Produced.Amount * reactionFactor - needAmount;
-                        if (extraAmount > 0)
-                        {
-                            excesses.Add(new Quantity(need.Chemical, extraAmount));
-                        }
-                    }
-                }
+                var oreAmount = Nanofactory.RequiredOreAmount(reactions, 1 /* fuelAmount */, out var excesses);
 
                 Console.WriteLine($"Excess: {excesses}");
-
                 Console.WriteLine(oreAmount);
             }
         }
@@ -143,7 +98,29 @@ namespace AdventOfCode2019
         {
             public void Run(TextReader input)
             {
-                throw new NotImplementedException();
+                var reactions = input.Lines().Select(Reaction.Parse).ToList();
+
+                var orePerFuelUnit = Nanofactory.RequiredOreAmount(reactions, 1 /* fuelAmount */, out var _);
+
+                var oreAmount = 1000000000000L;
+                var minFuel = oreAmount / orePerFuelUnit;
+                var maxFuel = minFuel * 2;
+
+                while (maxFuel - minFuel > 1)
+                {
+                    var fuel = (maxFuel + minFuel) / 2;
+                    var ore = Nanofactory.RequiredOreAmount(reactions, fuel, out var _);
+                    if (ore <= oreAmount)
+                    {
+                        minFuel = fuel;
+                    }
+                    else
+                    {
+                        maxFuel = fuel;
+                    }
+                }
+
+                Console.WriteLine(minFuel);
             }
         }
 
@@ -247,6 +224,64 @@ namespace AdventOfCode2019
             public override string ToString()
             {
                 return string.Join(", ", quantities);
+            }
+        }
+
+        private static class Nanofactory
+        {
+            public static long RequiredOreAmount(
+                IReadOnlyList<Reaction> reactions, 
+                long fuelAmount,
+                out ChecmicalList remainingExcesses)
+            {
+                var needed = new ChecmicalList();
+                needed.Add(new Quantity("FUEL", fuelAmount));
+
+                var excesses = new ChecmicalList();
+
+                var oreAmount = 0L;
+
+                while (!needed.Empty())
+                {
+                    var need = needed.Pop();
+
+                    if (need.Chemical == "ORE")
+                    {
+                        oreAmount += need.Amount;
+                        continue;
+                    }
+
+                    var needAmount = need.Amount;
+
+                    var excess = excesses.Find(need.Chemical);
+                    if (excess != null)
+                    {
+                        var excessAmount = Math.Min(excess.Amount, needAmount);
+
+                        needAmount -= excessAmount;
+                        excesses.Sub(new Quantity(excess.Chemical, excessAmount));
+                    }
+
+                    if (needAmount > 0)
+                    {
+                        var reaction = reactions.FirstOrDefault(r => r.Produced.Chemical == need.Chemical);
+                        var reactionFactor = (long)Math.Ceiling((double)needAmount / reaction.Produced.Amount);
+
+                        foreach (var req in reaction.Required)
+                        {
+                            needed.Add(new Quantity(req.Chemical, req.Amount * reactionFactor));
+                        }
+
+                        var extraAmount = reaction.Produced.Amount * reactionFactor - needAmount;
+                        if (extraAmount > 0)
+                        {
+                            excesses.Add(new Quantity(need.Chemical, extraAmount));
+                        }
+                    }
+                }
+
+                remainingExcesses = excesses;
+                return oreAmount;
             }
         }
     }

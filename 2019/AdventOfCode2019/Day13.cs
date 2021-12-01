@@ -159,8 +159,6 @@ namespace AdventOfCode2019
                 var minCol = cells.Keys.Select(pos => pos.Col).Min();
                 var maxCol = cells.Keys.Select(pos => pos.Col).Max();
 
-                var lines = new List<IReadOnlyList<Tile>>();
-
                 for (var row = minRow; row <= maxRow; row++)
                 {
                     for (var col = minCol; col <= maxCol; col++)

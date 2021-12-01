@@ -77,6 +77,15 @@ namespace AdventOfCode2019
             public OutputDevice Output => output;
             public Memory Mem => memory;
 
+            public Computer Clone()
+            {
+                var clone = new Computer(memory.Clone(), input.Clone(), output.Clone());
+                clone.ip = ip;
+                clone.relativeBase = relativeBase;
+
+                return clone;
+            }
+
             public Result Execute()
             {
                 while (true)
@@ -235,6 +244,8 @@ namespace AdventOfCode2019
                     this.values = values;
                 }
 
+                public Memory Clone() => new Memory(values.ToArray());
+
                 public long Read(int address)
                 {
                     EnsureAddressExists(address);
@@ -288,6 +299,8 @@ namespace AdventOfCode2019
                     this.values = new Queue<long>(values);
                 }
 
+                public InputDevice Clone() => new InputDevice(values.ToArray());
+
                 public bool HasData() => values.Count > 0;
 
                 public long Read()
@@ -309,6 +322,8 @@ namespace AdventOfCode2019
                 {
                     this.values = new List<long>();
                 }
+
+                public OutputDevice Clone() => new OutputDevice();
 
                 public void Write(long value)
                 {
