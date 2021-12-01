@@ -3,7 +3,7 @@ using System.IO;
 
 namespace AdventOfCode2021
 {
-    static class Day0
+    static class Day00
     {
         public static class Inputs
         {

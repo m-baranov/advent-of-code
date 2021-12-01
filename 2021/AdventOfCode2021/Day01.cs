@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace AdventOfCode2021
 {
-    static class Day1
+    static class Day01
     {
         public static class Inputs
         {
