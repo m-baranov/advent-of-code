@@ -81,7 +81,7 @@ namespace AdventOfCode2020
     public static class Input
     {
         private static readonly HttpClient HttpClient = new HttpClient();
-        private const string HttpSession = "53616c746564...";
+        public static string HttpSession = "unknown-session";
 
         public static IInput Literal(params string[] lines) => new LiteralInput(lines);
 

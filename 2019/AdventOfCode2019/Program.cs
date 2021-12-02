@@ -8,6 +8,8 @@ namespace AdventOfCode2019
     {
         static async Task Main(string[] args)
         {
+            Input.HttpSession = Environment.GetEnvironmentVariable("ADVENT_OF_CODE_SESSION");
+
             var problem = new Day16.Part2();
             await problem.Run(Day16.TestInput);
 
