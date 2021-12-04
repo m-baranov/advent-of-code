@@ -109,6 +109,34 @@ namespace AdventOfCode2021
                 yield return chunk;
             }
         }
+
+        public static IEnumerable<IReadOnlyList<string>> SplitByEmptyLine(this IEnumerable<string> lines)
+        {
+            var partition = new List<string>();
+
+            foreach (var line in lines)
+            {
+                if (string.IsNullOrEmpty(line))
+                {
+                    if (partition.Count > 0)
+                    {
+                        yield return partition;
+                    }
+
+                    partition = new List<string>();
+                }
+                else
+                {
+                    partition.Add(line);
+                }
+            }
+
+            if (partition.Count > 0)
+            {
+                yield return partition;
+            }
+        }
+
     }
 
     public static class MathExtensions
