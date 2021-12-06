@@ -74,6 +74,26 @@ namespace AdventOfCode2021
             return minItem;
         }
 
+        public static IReadOnlyDictionary<TKey, int> CountBy<T, TKey>(this IEnumerable<T> items, Func<T, TKey> selector)
+        {
+            var counts = new Dictionary<TKey, int>();
+
+            foreach (var item in items)
+            {
+                var key = selector(item);
+                if (counts.TryGetValue(key, out var count))
+                {
+                    counts[key] = count + 1;
+                }
+                else
+                {
+                    counts.Add(key, 1);
+                }
+            }
+
+            return counts;
+        }
+
         public static IEnumerable<IReadOnlyList<int>> AllPossibleOrders(IReadOnlyList<int> numbers)
         {
             IEnumerable<IReadOnlyList<int>> AppendUnique(IEnumerable<IReadOnlyList<int>> options, IEnumerable<int> append)
@@ -137,6 +157,15 @@ namespace AdventOfCode2021
             }
         }
 
+        public static IEnumerable<int> Sequence(int start, int delta)
+        {
+            var i = start;
+            while (true)
+            {
+                yield return i;
+                i += delta;
+            }
+        }
     }
 
     public static class MathExtensions
