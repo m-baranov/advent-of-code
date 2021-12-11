@@ -157,6 +157,14 @@ namespace AdventOfCode2021
             }
         }
 
+        public static void EnqueueRange<T>(this Queue<T> queue, IEnumerable<T> items)
+        {
+            foreach (var item in items)
+            {
+                queue.Enqueue(item);
+            }
+        }
+
         public static IEnumerable<int> Sequence(int start, int delta)
         {
             var i = start;
