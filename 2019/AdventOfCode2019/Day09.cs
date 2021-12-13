@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 namespace AdventOfCode2019
 {
@@ -28,7 +29,7 @@ namespace AdventOfCode2019
                 var computer = Computer.Of(program, new[] { 1L });
                 computer.Execute();
 
-                Console.WriteLine(computer.Output.Text());
+                Console.WriteLine(computer.Output.DebugText());
             }
         }
 
@@ -41,7 +42,7 @@ namespace AdventOfCode2019
                 var computer = Computer.Of(program, new[] { 2L });
                 computer.Execute();
 
-                Console.WriteLine(computer.Output.Text());
+                Console.WriteLine(computer.Output.DebugText());
             }
         }
 
@@ -312,6 +313,27 @@ namespace AdventOfCode2019
                 {
                     this.values.Enqueue(value);
                 }
+
+                public void EnterAsciiLines(IEnumerable<string> lines)
+                {
+                    foreach (var line in lines)
+                    {
+                        EnterAsciiLine(line);
+                    }
+                }
+
+                private void EnterAsciiLine(string line)
+                {
+                    EnterAsciiText(line + "\n");
+                }
+
+                private void EnterAsciiText(string text)
+                {
+                    foreach (var ch in text)
+                    {
+                        Enter((int)ch);
+                    }
+                }
             }
 
             public class OutputDevice
@@ -332,7 +354,20 @@ namespace AdventOfCode2019
 
                 public IReadOnlyList<long> Values() => this.values;
 
-                public string Text() => string.Join(',', Values());
+                public string AsciiText()
+                {
+                    var builder = new StringBuilder();
+                    foreach (var value in this.values)
+                    {
+                        builder.Append((char)value);
+                    }
+
+                    return builder.ToString();
+                }
+
+                public IReadOnlyList<string> AsciiLines() => AsciiText().Split('\n');
+
+                public string DebugText() => string.Join(',', Values());
             }
 
             private class Instruction

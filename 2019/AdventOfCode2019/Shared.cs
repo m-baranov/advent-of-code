@@ -67,6 +67,9 @@ namespace AdventOfCode2019
             return minItem;
         }
 
+        public static IEnumerable<IReadOnlyList<int>> AllPossibleOrders(int count) =>
+            AllPossibleOrders(Enumerable.Range(0, count).ToList());
+
         public static IEnumerable<IReadOnlyList<int>> AllPossibleOrders(IReadOnlyList<int> numbers)
         {
             IEnumerable<IReadOnlyList<int>> AppendUnique(IEnumerable<IReadOnlyList<int>> options, IEnumerable<int> append)
