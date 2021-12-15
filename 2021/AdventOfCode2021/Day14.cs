@@ -115,8 +115,14 @@ namespace AdventOfCode2021
 
                 // Account for the first and the last element, that appear in one less pair, 
                 // compared to all other elements.
-                elementCounts[setup.Template.First()]++;
-                elementCounts[setup.Template.Last()]++;
+                var firstElement = setup.Template.First();
+                elementCounts[firstElement]++;
+
+                var lastElement = setup.Template.Last();
+                if (firstElement != lastElement)
+                {
+                    elementCounts[lastElement]++;
+                }
 
                 DisplayResults(elementCounts);
             }
