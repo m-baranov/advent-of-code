@@ -174,6 +174,21 @@ namespace AdventOfCode2021
                 i += delta;
             }
         }
+
+        public static IEnumerable<int> Between(int start, int end)
+        {
+            IEnumerable<int> between(int start, int end)
+            {
+                for (var i = start; i <= end; i++)
+                {
+                    yield return i;
+                }
+            }
+
+            return start <= end
+                ? between(start, end)
+                : between(end, start);
+        }
     }
 
     public static class MathExtensions
