@@ -18,6 +18,20 @@ namespace AdventOfCode2021
                 .Zip(items.Skip(2), (ab, c) => (ab.a, ab.b, c));
         }
 
+        public static int IndexOf<T>(this IEnumerable<T> items, Func<T, bool> predicate)
+        {
+            var index = 0;
+            foreach (var item in items)
+            {
+                if (predicate(item))
+                {
+                    return index;
+                }
+                index++;
+            }
+            return -1;
+        }
+
         public static T MaxBy<T, V>(this IEnumerable<T> items, Func<T, V> selector, IComparer<V> comparer = null)
         {
             comparer = comparer ?? Comparer<V>.Default;
@@ -108,6 +122,11 @@ namespace AdventOfCode2021
             }
 
             return options;
+        }
+
+        public static IEnumerable<(T first, T second)> AllPossiblePairs<T>(this IEnumerable<T> items)
+        {
+            return items.SelectMany((first, index) => items.Skip(index + 1).Select(second => (first, second))); 
         }
 
         public static IEnumerable<IReadOnlyList<T>> Chunk<T>(this IEnumerable<T> items, int chunkSize)
