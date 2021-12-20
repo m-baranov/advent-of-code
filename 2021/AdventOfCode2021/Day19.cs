@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace AdventOfCode2021
 {
-    // Slow, but works. Takes ~20-25 sec to complete on test input on my notebook.
+    // Slow, but works. Takes ~13-15 sec to complete on test input on my notebook.
     static class Day19
     {
         public static class Inputs
@@ -183,11 +183,11 @@ namespace AdventOfCode2021
                 var conversions = ScanMatcher.FindConversionsToScanner0(scans);
 
                 var origins = scans
-                    .Select(scan => conversions[scan.Scanner].Convert(Vector.Zero))
+                    .Select(scan => conversions[scan.Scanner].Convert(Point.Zero))
                     .ToList();
 
                 var answer = origins.AllPossiblePairs()
-                    .Select(p => Vector.ManhattanDistance(p.first, p.second))
+                    .Select(p => Point.ManhattanDistance(p.first, p.second))
                     .Max();
 
                 Console.WriteLine(answer);
@@ -204,22 +204,22 @@ namespace AdventOfCode2021
             private static Scan Parse(IReadOnlyList<string> lines, int scanner)
             {
                 var points = lines.Skip(1) // skip "--- scanner N ---"
-                    .Select(Vector.Parse)
+                    .Select(Point.Parse)
                     .ToList();
 
                 return new Scan(scanner, points);
             }
 
-            public Scan(int scanner, IReadOnlyList<Vector> points)
+            public Scan(int scanner, IReadOnlyList<Point> points)
             {
                 Scanner = scanner;
                 Points = points;
             }
 
             public int Scanner { get; }
-            public IReadOnlyList<Vector> Points { get; }
+            public IReadOnlyList<Point> Points { get; }
 
-            public Scan RelativeTo(Vector origin)
+            public Scan RelativeTo(Point origin)
             {
                 var points = Points.Select(p => p.Sub(origin)).ToList();
                 return new Scan(Scanner, points);
@@ -233,41 +233,33 @@ namespace AdventOfCode2021
                     .ToList();
             }
 
-            public int IndexOfPoint(Vector point) => Points.IndexOf(p => p.Equals(point));
+            public int IndexOfPoint(Point point) => Points.IndexOf(p => p.Equals(point));
 
-            public IEnumerable<(Scan scan, Rotation rotation)> AllRotations() =>
-                Rotation.All.Select(r => (Transform(r.Rotate), r));
-
-            public Scan Transform(Func<Vector, Vector> tranfrom)
+            public Scan Transform(Func<Point, Point> tranfrom)
             {
                 var points = Points.Select(tranfrom).ToList();
                 return new Scan(Scanner, points);
             }
         }
 
-        private class Vector
+        // Using struct instead of class shaves off 2-3 seconds on test input
+        private struct Point : IEquatable<Point>
         {
-            public static readonly Vector Zero = new Vector(0, 0, 0);
+            public static readonly Point Zero = new Point(0, 0, 0);
 
-            public static Vector Parse(string text)
+            public static Point Parse(string text)
             {
-                var parts = text.Split(',').Take(3).Select(int.Parse).ToList();
-                return new Vector(parts[0], parts[1], parts[2]);
+                var parts = text.Split(',').Take(3).Select(short.Parse).ToList();
+                return new Point(parts[0], parts[1], parts[2]);
             }
 
-            public static Vector Delta(Vector a, Vector b)
+            public static int ManhattanDistance(Point a, Point b)
             {
                 static int delta(int a, int b) => Math.Abs(a - b);
-                return new Vector(delta(a.X, b.X), delta(a.Y, b.Y), delta(a.Z, b.Z));
+                return delta(a.X, b.X) + delta(a.Y, b.Y) + delta(a.Z, b.Z);
             }
 
-            public static int ManhattanDistance(Vector a, Vector b)
-            {
-                var d = Delta(a, b);
-                return d.X + d.Y + d.Z;
-            }
-
-            public Vector(int x, int y, int z)
+            public Point(int x, int y, int z) 
             {
                 X = x;
                 Y = y;
@@ -281,63 +273,63 @@ namespace AdventOfCode2021
             public override string ToString() => $"{X},{Y},{Z}";
 
             public override bool Equals(object obj) =>
-                obj is Vector other ? Equals(other) : false;
+                obj is Point other ? Equals(other) : false;
 
-            private bool Equals(Vector other) => X == other.X && Y == other.Y && Z == other.Z;
+            public bool Equals(Point other) => X == other.X && Y == other.Y && Z == other.Z;
 
             public override int GetHashCode() => HashCode.Combine(X, Y, Z);
 
-            public Vector Sub(Vector v) => new Vector(X - v.X, Y - v.Y, Z - v.Z);
+            public Point Sub(Point v) => new Point(X - v.X, Y - v.Y, Z - v.Z);
 
-            public Vector Negate() => new Vector(-X, -Y, -Z);
+            public Point Negate() => new Point(-X, -Y, -Z);
 
-            public Vector FlipX() => new Vector(-X, Y, Z);
-            public Vector FlipY() => new Vector(X, -Y, Z);
-            public Vector FlipZ() => new Vector(X, Y, -Z);
+            public Point FlipX() => new Point(-X, Y, Z);
+            public Point FlipY() => new Point(X, -Y, Z);
+            public Point FlipZ() => new Point(X, Y, -Z);
 
-            public Vector RotateX0() => RotateX(sin: 0, cos: 1);
-            public Vector RotateX90() => RotateX(sin: 1, cos: 0);
-            public Vector RotateX180() => RotateX(sin: 0, cos: -1);
-            public Vector RotateX270() => RotateX(sin: -1, cos: 0);
+            public Point RotateX0() => RotateX(sin: 0, cos: 1);
+            public Point RotateX90() => RotateX(sin: 1, cos: 0);
+            public Point RotateX180() => RotateX(sin: 0, cos: -1);
+            public Point RotateX270() => RotateX(sin: -1, cos: 0);
 
             // Matrix: 
             // | 1       0        0 |
             // | 0  Cos(a)  -Sin(a) |
             // | 0  Sin(a)   Cos(a) |
-            private Vector RotateX(int sin, int cos) =>
-                new Vector(
+            private Point RotateX(int sin, int cos) =>
+                new Point(
                     X, 
                     cos * Y - sin * Z,
                     sin * Y + cos * Z
                 );
 
-            public Vector RotateY0() => RotateY(sin: 0, cos: 1);
-            public Vector RotateY90() => RotateY(sin: 1, cos: 0);
-            public Vector RotateY180() => RotateY(sin: 0, cos: -1);
-            public Vector RotateY270() => RotateY(sin: -1, cos: 0);
+            public Point RotateY0() => RotateY(sin: 0, cos: 1);
+            public Point RotateY90() => RotateY(sin: 1, cos: 0);
+            public Point RotateY180() => RotateY(sin: 0, cos: -1);
+            public Point RotateY270() => RotateY(sin: -1, cos: 0);
 
             // Matrix
             // |  Cos(a)  0  Sin(a) |
             // |       0  1       0 |
             // | -Sin(a)  0  Cos(a) |
-            private Vector RotateY(int sin, int cos) =>
-                new Vector(
+            private Point RotateY(int sin, int cos) =>
+                new Point(
                     cos * X + sin * Z,
                     Y,
                     -sin * X + cos * Z
                 );
 
-            public Vector RotateZ0() => RotateZ(sin: 0, cos: 1);
-            public Vector RotateZ90() => RotateZ(sin: 1, cos: 0);
-            public Vector RotateZ180() => RotateZ(sin: 0, cos: -1);
-            public Vector RotateZ270() => RotateZ(sin: -1, cos: 0);
+            public Point RotateZ0() => RotateZ(sin: 0, cos: 1);
+            public Point RotateZ90() => RotateZ(sin: 1, cos: 0);
+            public Point RotateZ180() => RotateZ(sin: 0, cos: -1);
+            public Point RotateZ270() => RotateZ(sin: -1, cos: 0);
 
             // Matrix
             // | Cos(a)  -Sin(a)  0 |
             // | Sin(a)   Cos(a)  0 |
             // |      0        0  1 |
-            private Vector RotateZ(int sin, int cos) =>
-                new Vector(
+            private Point RotateZ(int sin, int cos) =>
+                new Point(
                     cos * X - sin * Y,
                     sin * X + cos * Y,
                     Z
@@ -382,24 +374,24 @@ namespace AdventOfCode2021
                     new Rotation(v => v.FlipZ().RotateY270(), v => v.RotateZ90().FlipZ()),
                 };
 
-            public Rotation(Func<Vector, Vector> rotate)
+            public Rotation(Func<Point, Point> rotate)
                 : this(rotate, unrotate: rotate)
             {
             }
 
-            public Rotation(Func<Vector, Vector> rotate, Func<Vector, Vector> unrotate)
+            public Rotation(Func<Point, Point> rotate, Func<Point, Point> unrotate)
             {
                 Rotate = rotate;
                 Unrotate = unrotate;
             }
 
-            public Func<Vector, Vector> Rotate { get; }
-            public Func<Vector, Vector> Unrotate { get; }
+            public Func<Point, Point> Rotate { get; }
+            public Func<Point, Point> Unrotate { get; }
         }
 
         private interface IConversion
         {
-            Vector Convert(Vector point);
+            Point Convert(Point point);
         }
 
         private class IdentityConversion : IConversion
@@ -408,7 +400,7 @@ namespace AdventOfCode2021
 
             private IdentityConversion() {  }
 
-            public Vector Convert(Vector point) => point;
+            public Point Convert(Point point) => point;
 
             public override string ToString() => "id";
         }
@@ -422,7 +414,7 @@ namespace AdventOfCode2021
                 this.conversions = conversions;
             }
 
-            public Vector Convert(Vector point) => conversions.Aggregate(point, (p, c) => c.Convert(p));
+            public Point Convert(Point point) => conversions.Aggregate(point, (p, c) => c.Convert(p));
 
             public override string ToString() => string.Join(",", conversions);
         }
@@ -434,7 +426,7 @@ namespace AdventOfCode2021
                 Rotation rotationSrc, 
                 int scannerDst, 
                 Rotation rotationDst, 
-                Vector originDstInSrc)
+                Point originDstInSrc)
             {
                 ScannerSrc = scannerSrc;
                 RotationSrc = rotationSrc;
@@ -447,7 +439,7 @@ namespace AdventOfCode2021
             public Rotation RotationSrc { get; }
             public int ScannerDst { get; }
             public Rotation RotationDst { get; }
-            public Vector OriginDstInSrc { get; }
+            public Point OriginDstInSrc { get; }
 
             public override string ToString() => $"{ScannerSrc}->{ScannerDst}";
 
@@ -460,7 +452,7 @@ namespace AdventOfCode2021
                     originDstInSrc: OriginDstInSrc.Negate()
                 );
 
-            public Vector Convert(Vector src) => 
+            public Point Convert(Point src) => 
                 RotationDst.Unrotate(RotationSrc.Rotate(src).Sub(OriginDstInSrc));
         }
 
@@ -562,8 +554,11 @@ namespace AdventOfCode2021
 
             private static DirectConversion TryFindDirectConversion(Scan scanA, Scan scanB)
             {
-                return scanA.AllRotations()
-                    .SelectMany(a => scanB.AllRotations()
+                static IEnumerable<(Scan scan, Rotation rotation)> AllRotations(Scan scan) =>
+                    Rotation.All.Select(r => (scan.Transform(r.Rotate), r));
+
+                return AllRotations(scanA)
+                    .SelectMany(a => AllRotations(scanB)
                         .Select(b =>
                         {
                             var indices = MatchingPointIndices(a.scan, b.scan);
@@ -589,24 +584,24 @@ namespace AdventOfCode2021
 
             private static IReadOnlyList<(int indexA, int indexB)> MatchingPointIndices(Scan scanA, Scan scanB)
             {
-                static IEnumerable<Vector> Deltas(Scan scan) =>
-                    scan.Points.AllPossiblePairs().Select(p => Vector.Delta(p.first, p.second));
+                static IEnumerable<Point> Vectors(Scan scan) =>
+                    scan.Points.AllPossiblePairs().Select(p => p.second.Sub(p.first));
 
-                var commonDeltas = Deltas(scanA).Intersect(Deltas(scanB)).ToHashSet();
-                if (commonDeltas.Count < 11) // 12 points, but 11 pairs
+                var commonVectors = Vectors(scanA).Intersect(Vectors(scanB)).ToHashSet();
+                if (commonVectors.Count < 11) // 12 points, but 11 pairs
                 {
                     return null;
                 }
 
-                static IEnumerable<Vector> PossibleCommonPoints(Scan scan, ISet<Vector> commonDeltas) =>
+                static IEnumerable<Point> PossibleCommonPoints(Scan scan, ISet<Point> commonVectors) =>
                     scan.Points.AllPossiblePairs()
-                        .Where(p => commonDeltas.Contains(Vector.Delta(p.first, p.second)))
+                        .Where(p => commonVectors.Contains(p.second.Sub(p.first)))
                         .SelectMany(p => new[] { p.first, p.second })
                         .Distinct()
                         .ToList();
 
-                var pointsA = PossibleCommonPoints(scanA, commonDeltas);
-                var pointsB = PossibleCommonPoints(scanB, commonDeltas);
+                var pointsA = PossibleCommonPoints(scanA, commonVectors);
+                var pointsB = PossibleCommonPoints(scanB, commonVectors);
 
                 return pointsA
                     .SelectMany(originA =>
