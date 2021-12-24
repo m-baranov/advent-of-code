@@ -149,13 +149,18 @@ namespace AdventOfCode2021
             }
         }
 
-        public static IEnumerable<IReadOnlyList<string>> SplitByEmptyLine(this IEnumerable<string> lines)
+        public static IEnumerable<IReadOnlyList<string>> SplitByEmptyLine(this IEnumerable<string> lines) =>
+            lines.SplitBy(string.IsNullOrEmpty);
+
+        public static IEnumerable<IReadOnlyList<string>> SplitBy(
+            this IEnumerable<string> lines, 
+            Func<string, bool> predicate)
         {
             var partition = new List<string>();
 
             foreach (var line in lines)
             {
-                if (string.IsNullOrEmpty(line))
+                if (predicate(line))
                 {
                     if (partition.Count > 0)
                     {
