@@ -225,6 +225,41 @@ namespace AdventOfCode2021
                 }
             }
 
+            // Room and hallway layout.
+            //
+            // Hallway:  01 2 3 4 56
+            //           || | | | ||
+            //           VV V V V VV
+            //          #...........#
+            //          ###A#B#C#D###
+            //            #A#B#C#D#
+            //    Room:    ^ ^ ^ ^
+            //             | | | |
+            //             0 1 2 3
+            //
+            // Assume all in straight line; each room and hallway can then be 
+            // numbered by it's position on this line. Two-cell hallways at the
+            // ends are considered as two separate hallways each. To make positions
+            // consistent imagine there are two extra rooms (with indexes -1 and 4)
+            // which are never used. 
+            // 
+            // 
+            //   H0      H1      H2      H3      H4      H5      H6
+            //    _       _       _       _       _       _       _ 
+            //   |_|     |_|     |_|     |_|     |_|     |_|     |_|
+            //        _       _       _       _       _       _ 
+            //       |_|     |_|     |_|     |_|     |_|     |_|
+            //       |_|     |_|     |_|     |_|     |_|     |_|
+            //   
+            //     (R-1)     R0      R1      R2      R3      (R4)
+            //
+            //  ----------------------------------------------------> pos
+            //   0   1   2   3   4   5   6   7   8   9   10  11  12
+            //
+            // Cost of movement between each room and neighboring hallway is 2;
+            // between two hallways is also 2, except for H0 and H6. The distance
+            // between H0 and H1, and between H5 and H6 is 1. 
+
             private int MoveCost(Move move) => Steps(move) * Cell.CostPerStep(move.Ch);
 
             public int Steps(Move move) => Steps(move.Room, move.Cell, move.Hallway);
