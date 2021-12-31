@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
@@ -40,6 +41,52 @@ namespace AdventOfCode2019
                 "########################"
             );
 
+        public static readonly IInput Sample4Input =
+            Input.Literal(
+                "#######",
+                "#a.#Cd#",
+                "##...##",
+                "##.@.##",
+                "##...##",
+                "#cB#Ab#",
+                "#######"
+            );
+
+        public static readonly IInput Sample5Input =
+            Input.Literal(
+                "###############",
+                "#d.ABC.#.....a#",
+                "######...######",
+                "######.@.######",
+                "######...######",
+                "#b.....#.....c#",
+                "###############"
+            );
+
+        public static readonly IInput Sample6Input =
+            Input.Literal(
+                "#############",
+                "#DcBa.#.GhKl#",
+                "#.###...#I###",
+                "#e#d#.@.#j#k#",
+                "###C#...###J#",
+                "#fEbA.#.FgHi#",
+                "#############"
+            );
+
+        public static readonly IInput Sample7Input =
+            Input.Literal(
+                "#############",
+                "#g#f.D#..h#l#",
+                "#F###e#E###.#",
+                "#dCba...BcIJ#",
+                "#####.@.#####",
+                "#nK.L...G...#",
+                "#M###N#H###.#",
+                "#o#m..#i#jk.#",
+                "#############"
+            );
+
         public static readonly IInput TestInput =
             Input.Http("https://adventofcode.com/2019/day/18/input");
 
@@ -51,93 +98,79 @@ namespace AdventOfCode2019
 
                 var grid = Grid.Parse(input.Lines());
 
-                var keyCount = grid.CountKeys();
+                var watch = Stopwatch.StartNew();
 
-                var entrancePosition = grid.PositionOfEntrance();
-                var map = MapGenerator.Discover(grid, entrancePosition);
-                var entranceArea = map.AreaById(1);
+                var entrancePosition = grid.FindEntrances().Single();
+                var (map, entranceArea) = MapGenerator.Discover(grid, entrancePosition);
 
-                var initialPath = new Path(entranceArea, entrancePosition, distance: 0, steps: ImmutableStack<Step>.Empty);
-                var bestPath = Search(keyCount, map, initialPath, bestPath: null);
-                Console.WriteLine(bestPath);
+                var initialPath = Path.Initial(map, entranceArea, entrancePosition);
+                var bestSolution = Search(initialPath, Solution.Worst);
+
+                watch.Stop();
+                Console.WriteLine(bestSolution);
+                Console.WriteLine($"Elapsed: {watch.ElapsedMilliseconds} ms");
             }
 
-            private Path Search(int keyCount, Map map, Path currentPath, Path bestPath)
+            private Solution Search(Path path, Solution solution)
             {
-                if (keyCount == currentPath.Keys.Count())
+                if (path.Map.ContainsKeys.Count == path.CollectedKeys.Count)
                 {
-                    return currentPath.IsShorterThan(bestPath) ? currentPath : bestPath;
+                    return path.Distance < solution.Distance ? Solution.Of(path) : solution;
                 }
 
-                var allowBacktracking = currentPath.KeysPickedUp;
-
-                IEnumerable<Exit> exitsToConsider = currentPath.CurrentArea.Exits;
-                if (!allowBacktracking && !currentPath.Steps.IsEmpty)
+                var possibilities = path.PossibleNextPaths();
+                foreach (var nextPath in possibilities)
                 {
-                    var cameFromAreaId = currentPath.Steps.Peek().From.Id;
-                    exitsToConsider = exitsToConsider.Where(e => e.ToAreaId != cameFromAreaId);
+                    if (nextPath.Distance < solution.Distance)
+                    {
+                        solution = Search(nextPath, solution);
+                    }
                 }
-
-                var exitOptions = exitsToConsider
-                    .Select(exit => (exit: exit, availableKeys: Lookahead(map, currentPath, exit)))
-                    .ToList();
-
-                var exitWithAllKeys = exitOptions
-                    .Where(o => o.availableKeys == AvailableKeys.All)
-                    .Select(o => o.exit)
-                    .FirstOrDefault();
-                if (exitWithAllKeys != null)
-                {
-                    var nextPath = currentPath.Go(exitWithAllKeys, map);
-                    return Search(keyCount, map, nextPath, bestPath);
-                }
-
-                var exitsWithSomeKeys = exitOptions
-                   .Where(o => o.availableKeys == AvailableKeys.Some)
-                   .Select(o => o.exit);
-                foreach (var exitWithSomeKeys in exitsWithSomeKeys)
-                {
-                    var nextPath = currentPath.Go(exitWithSomeKeys, map);
-                    bestPath = Search(keyCount, map, nextPath, bestPath);
-                }
-
-                return bestPath;
+                return solution;
             }
-
-            private AvailableKeys Lookahead(Map map, Path path, Exit exit)
-            {
-                var collectedKeys = path.Keys;
-                var keysBehindExit = map.Keys(path.CurrentArea, exit);
-
-                var notCollected = keysBehindExit.Where(d => !collectedKeys.Contains(d.Key)).ToList();
-                if (notCollected.Count == 0)
-                {
-                    return AvailableKeys.None;
-                }
-
-                var canCollectCount = notCollected.Count(d => d.RequiresKeys.All(rk => collectedKeys.Contains(rk)));
-                if (canCollectCount == 0)
-                {
-                    return AvailableKeys.None;
-                }
-                else if (canCollectCount == notCollected.Count)
-                {
-                    return AvailableKeys.All;
-                }
-                else
-                {
-                    return AvailableKeys.Some;
-                }
-            }
-
-            private enum AvailableKeys { None, Some, All };
         }
 
         public class Part2 : IProblem
         {
             public void Run(TextReader input)
             {
-                throw new NotImplementedException();
+                // And this one took A LOT MORE!
+
+                var grid = Grid.Parse(input.Lines()).ToMultiEntrance();
+
+                var watch = Stopwatch.StartNew();
+
+                var initialPaths = grid.FindEntrances()
+                    .Select(entrancePosition =>
+                    {
+                        var (map, entranceArea) = MapGenerator.Discover(grid, entrancePosition);
+                        return Path.Initial(map, entranceArea, entrancePosition);
+                    })
+                    .ToList();
+
+                var bestSolution = Search(MultiPath.Of(initialPaths), Solution.Worst);
+
+                watch.Stop();
+                Console.WriteLine(bestSolution);
+                Console.WriteLine($"Elapsed: {watch.ElapsedMilliseconds} ms");
+            }
+
+            private Solution Search(MultiPath paths, Solution solution)
+            {
+                if (paths.TotalKeys == paths.CollectedKeys.Count)
+                {
+                    return paths.Distance < solution.Distance ? Solution.Of(paths) : solution;
+                }
+
+                var possibilities = paths.PossibleNextPaths();
+                foreach (var nextPaths in possibilities)
+                {
+                    if (nextPaths.Distance < solution.Distance)
+                    {
+                        solution = Search(nextPaths, solution);
+                    }
+                }
+                return solution;
             }
         }
 
@@ -165,6 +198,14 @@ namespace AdventOfCode2019
                 yield return Right();
                 yield return Bottom();
                 yield return Left();
+            }
+
+            public IEnumerable<Position> DiagonalNeighbours()
+            {
+                yield return TopLeft();
+                yield return TopRight();
+                yield return BottomRight();
+                yield return BottomLeft();
             }
 
             public IEnumerable<IEnumerable<Position>> Corners()
@@ -239,100 +280,28 @@ namespace AdventOfCode2019
             }
         }
 
-        private abstract class Cell
+        private static class Symbols
         {
-            public static Cell Parse(char ch) =>
-                ch switch
-                {
-                    '@' => Entrance.Instance,
-                    '#' => Wall.Instance,
-                    var k when 'a' <= k && k <= 'z' => new Key(k),
-                    var d when 'A' <= d && d <= 'Z' => new Door(char.ToLower(d)),
-                    _ => Passage.Instance
-                };
+            public const char Wall = '#';
+            public const char Passage = '.';
+            public const char Entrance = '@';
 
-            public override string ToString()
-            {
-                if (this is Entrance)
-                {
-                    return "@";
-                }
-                else if (this is Wall)
-                {
-                    return "#";
-                }
-                else if (this is Key key)
-                {
-                    return key.Symbol.ToString();
-                }
-                else if (this is Door door)
-                {
-                    return char.ToUpper(door.Symbol).ToString();
-                }
-                else
-                {
-                    return ".";
-                }
-            }
-
-            public override bool Equals(object obj) =>
-                obj is Cell other ? ToString() == other.ToString() : false;
-
-            public override int GetHashCode() => ToString().GetHashCode();
-
-            public class Entrance : Cell
-            {
-                public static readonly Entrance Instance = new Entrance();
-                private Entrance() { }
-            }
-
-            public class Wall : Cell
-            {
-                public static readonly Wall Instance = new Wall();
-                private Wall() { }
-            }
-
-            public class Passage : Cell
-            {
-                public static readonly Passage Instance = new Passage();
-                private Passage() { }
-            }
-
-            public class Door : Cell
-            {
-                public Door(char symbol)
-                {
-                    Symbol = symbol;
-                }
-
-                public char Symbol { get; }
-            }
-
-            public class Key : Cell
-            {
-                public Key(char symbol)
-                {
-                    Symbol = symbol;
-                }
-
-                public char Symbol { get; }
-            }
+            public static bool IsKey(char ch) => 'a' <= ch && ch <= 'z';
+            public static bool IsDoor(char ch) => 'A' <= ch && ch <= 'Z';
+            public static char KeyForDoor(char door) => char.ToLower(door);
         }
 
         private class Grid
         {
             public static Grid Parse(IEnumerable<string> lines)
             {
-                var cells = lines
-                    .Select(line => line.Select(Cell.Parse).ToArray())
-                    .ToArray();
-
+                var cells = lines.Select(line => line.ToArray()).ToArray();
                 return new Grid(cells);
             }
 
-            private readonly IReadOnlyList<IReadOnlyList<Cell>> cells;
+            private readonly IReadOnlyList<IReadOnlyList<char>> cells;
 
-            public Grid(IReadOnlyList<IReadOnlyList<Cell>> cells)
+            public Grid(IReadOnlyList<IReadOnlyList<char>> cells)
             {
                 this.cells = cells;
             }
@@ -344,60 +313,33 @@ namespace AdventOfCode2019
                 0 <= pos.Row && pos.Row < Rows &&
                 0 <= pos.Col && pos.Col < Cols;
 
-            public Cell At(Position pos)
+            public char At(Position pos) => 
+                IsInBounds(pos) ? this.cells[pos.Row][pos.Col] : Symbols.Wall;
+
+            public IReadOnlyList<Position> FindEntrances()
             {
-                if (IsInBounds(pos))
-                {
-                    return this.cells[pos.Row][pos.Col];
-                }
-                return Cell.Wall.Instance;
-            }
-
-            public Position PositionOfEntrance() => PositionOf(Cell.Entrance.Instance);
-
-            public Position PositionOf(Cell cellToFind)
-            {
-                for (var row = 0; row < Rows; row++)
-                {
-                    for (var col = 0; col < Cols; col++)
-                    {
-                        var cell = cells[row][col];
-                        if (cell.Equals(cellToFind))
-                        {
-                            return new Position(row, col);
-                        }
-                    }
-                }
-
-                return null;
-            }
-
-            public int CountKeys() => Count(c => c is Cell.Key);
-
-            public int Count(Func<Cell, bool> predicate)
-            {
-                var count = 0;
+                var positions = new List<Position>();
 
                 for (var row = 0; row < Rows; row++)
                 {
                     for (var col = 0; col < Cols; col++)
                     {
-                        var cell = cells[row][col];
-                        if (predicate(cell))
+                        var pos = new Position(row, col);
+                        if (At(pos) == Symbols.Entrance)
                         {
-                            count++;
+                            positions.Add(pos);
                         }
                     }
                 }
 
-                return count;
+                return positions;
             }
 
             public IReadOnlyList<char> RequiresKeysAt(IEnumerable<Position> positions) =>
-                positions.Select(At).OfType<Cell.Door>().Select(d => d.Symbol).ToList();
+                positions.Select(At).Where(Symbols.IsDoor).Select(Symbols.KeyForDoor).ToList();
 
             public IReadOnlyList<char> ContainsKeysAt(IEnumerable<Position> positions) =>
-                positions.Select(At).OfType<Cell.Key>().Select(d => d.Symbol).ToList();
+                positions.Select(At).Where(Symbols.IsKey).ToList();
 
             public DistanceLookup FindShortestDistances(
                 ISet<Position> area,
@@ -433,7 +375,7 @@ namespace AdventOfCode2019
                     var neighbourPositions = position.CardinalNeighbours().Where(area.Contains);
                     foreach (var neighbourPosition in neighbourPositions)
                     {
-                        if (At(neighbourPosition) is Cell.Wall)
+                        if (At(neighbourPosition) == Symbols.Wall)
                         {
                             continue;
                         }
@@ -451,11 +393,48 @@ namespace AdventOfCode2019
 
                 return distances;
             }
+
+            public Grid ToMultiEntrance()
+            {
+                var entrance = FindEntrances().Single();
+
+                var rows = new List<List<char>>();
+
+                for (var r = 0; r < Rows; r++)
+                {
+                    var row = new List<char>();
+
+                    for (var c = 0; c < Cols; c++)
+                    {
+                        var pos = new Position(r, c);
+
+                        var dr = Math.Abs(pos.Row - entrance.Row);
+                        var dc = Math.Abs(pos.Col - entrance.Col);
+
+                        if (dr == 1 && dc == 1)
+                        {
+                            row.Add(Symbols.Entrance);
+                        }
+                        else if (dr <= 1 && dc <= 1)
+                        {
+                            row.Add(Symbols.Wall);
+                        }
+                        else
+                        {
+                            row.Add(At(pos));
+                        }
+                    }
+
+                    rows.Add(row);
+                }
+
+                return new Grid(rows);
+            }
         }
 
         private static class MapGenerator
         {
-            public static Map Discover(Grid grid, Position entrance)
+            public static (Map map, Area entranceArea) Discover(Grid grid, Position entrance)
             {
                 var areas = new List<WorkArea>();
                 var lastAreaId = 0;
@@ -491,7 +470,8 @@ namespace AdventOfCode2019
                     areas.Add(new WorkArea(areaId, discovered.Positions, exits));
                 }
 
-                return new Map(areas.Select(area => CreateArea(area, grid, entrance)).ToList());
+                var map = new Map(areas.Select(area => CreateArea(area, grid, entrance)).ToList());
+                return (map, map.AreaById(1));
             }
 
             private class WorkArea
@@ -530,7 +510,12 @@ namespace AdventOfCode2019
                             continue;
                         }
 
-                        if (cellType != CellType.Key && neighbourCellType == cellType)
+                        // make keys and doors always be an area of its own
+                        var sameArea = cellType != CellType.Key 
+                            && cellType != CellType.Door
+                            && neighbourCellType == cellType;
+
+                        if (sameArea)
                         {
                             positions.Add(neighbourPosition);
                             toVisit.Enqueue(neighbourPosition);
@@ -562,26 +547,30 @@ namespace AdventOfCode2019
             private static CellType ClassifyCell(Grid grid, Position pos)
             {
                 var cell = grid.At(pos);
-                if (cell is Cell.Wall)
+                if (cell == Symbols.Wall)
                 {
                     return CellType.Wall;
                 }
-                if (cell is Cell.Key)
+                if (Symbols.IsKey(cell))
                 {
                     return CellType.Key;
                 }
+                if (Symbols.IsDoor(cell))
+                {
+                    return CellType.Door;
+                }
 
-                var isRoom = pos.Corners().Any(cps => cps.Select(grid.At).All(c => c is not Cell.Wall));
+                var isRoom = pos.Corners().Any(cps => cps.Select(grid.At).All(c => c != Symbols.Wall));
                 if (isRoom)
                 {
                     return CellType.Room;
                 }
 
-                var exits = pos.CardinalNeighbours().Select(grid.At).Count(c => c is not Cell.Wall);
+                var exits = pos.CardinalNeighbours().Select(grid.At).Count(c => c != Symbols.Wall);
                 return exits > 2 ? CellType.Crossroads : CellType.Passage;
             }
 
-            private enum CellType { Wall, Key, Passage, Crossroads, Room }
+            private enum CellType { Wall, Key, Door, Passage, Crossroads, Room }
 
             private static Area CreateArea(WorkArea area, Grid grid, Position entrance)
             {
@@ -608,7 +597,10 @@ namespace AdventOfCode2019
             {
                 _areaById = areas.ToDictionary(a => a.Id);
                 _keyRequirementsLookup = KeyRequirementsLookup.Create(this);
+                ContainsKeys = areas.SelectMany(a => a.ContainsKeys).ToList();
             }
+
+            public IReadOnlyList<char> ContainsKeys { get; }
 
             public IEnumerable<Area> Areas() => _areaById.Values;
 
@@ -657,7 +649,11 @@ namespace AdventOfCode2019
 
         private class Path
         {
+            public static Path Initial(Map map, Area area, Position position) =>
+                new Path(map, area, position, distance: 0, steps: ImmutableStack<Step>.Empty);
+
             public Path(
+                Map map,
                 Area currentArea,
                 Position currentPosition,
                 int distance, 
@@ -665,41 +661,115 @@ namespace AdventOfCode2019
                 IReadOnlyList<char> keys = null,
                 bool keysPickedUp = false)
             {
+                Map = map;
                 CurrentArea = currentArea;
                 CurrentPosition = currentPosition;
                 Distance = distance;
                 Steps = steps;
-                Keys = keys ?? Array.Empty<char>();
+                CollectedKeys = keys ?? Array.Empty<char>();
                 KeysPickedUp = keysPickedUp;
             }
 
+            public Map Map { get; }
             public Area CurrentArea { get; }
             public Position CurrentPosition { get; }
             public int Distance { get; }
             public ImmutableStack<Step> Steps { get; }
-            public IReadOnlyList<char> Keys { get; }
+            public IReadOnlyList<char> CollectedKeys { get; }
             public bool KeysPickedUp { get; }
 
-            public override string ToString() => $"{Distance}, keys={string.Join("", Keys)}";
+            public override string ToString() => $"{Distance}, keys={string.Join("", CollectedKeys)}";
 
-            public bool IsShorterThan(Path other) => Distance < (other?.Distance ?? int.MaxValue);
-
-            public Path Go(Exit throughExit, Map map) => Go(throughExit, map.AreaById(throughExit.ToAreaId));
-
-            public Path Go(Exit throughExit, Area toArea)
+            public Path Go(Exit throughExit)
             {
+                var toArea = Map.AreaById(throughExit.ToAreaId);
+
                 var nextSteps = Steps.Push(new Step(from: CurrentArea, exit: throughExit));
 
                 // +1 accounts for going throuh exit
                 var nextDistance = Distance + 1 + 
                     CurrentArea.Distances.Between(CurrentPosition, throughExit.FromPosition);
 
-                var nextKeys = Keys.Concat(toArea.ContainsKeys).Distinct().ToList();
-                var keysPickedUp = nextKeys.Count > Keys.Count;
+                var nextKeys = CollectedKeys.Concat(toArea.ContainsKeys).Distinct().ToList();
+                var keysPickedUp = nextKeys.Count > CollectedKeys.Count;
 
-                return new Path(toArea, throughExit.ToPosition, nextDistance, nextSteps, nextKeys, keysPickedUp);
+                return new Path(Map, toArea, throughExit.ToPosition, nextDistance, nextSteps, nextKeys, keysPickedUp);
+            }
+
+            public IReadOnlyList<Path> PossibleNextPaths()
+            {
+                return Lookahead(CollectedKeys).Select(r => Go(r.exit)).ToList();
+            }
+
+            // Allow supplying collected keys externally and return more details to account
+            // for the Part 2 requirements.
+            public IReadOnlyList<(Exit exit, AvailableKeys availableKeys)> Lookahead(IReadOnlyList<char> collectedKeys)
+            {
+                var allowBacktracking = KeysPickedUp;
+
+                var possibleExits = new List<(Exit exit, AvailableKeys availableKeys)>();
+
+                foreach (var exit in CurrentArea.Exits)
+                {
+                    // Only consider going back to where we came from if a key is picked
+                    // up on the last step. This ensures that we are always making progress,
+                    // and removes infinite loops of going back and forth between two areas.
+                    if (!allowBacktracking)
+                    {
+                        if (!Steps.IsEmpty && exit.ToAreaId == Steps.Peek().From.Id)
+                        {
+                            continue;
+                        }
+                    }
+
+                    var availableKeys = Lookahead(exit, collectedKeys);
+                    if (availableKeys == AvailableKeys.All)
+                    {
+                        return new[] { (exit, AvailableKeys.All) };
+                    }
+
+                    if (availableKeys == AvailableKeys.Some)
+                    {
+                        possibleExits.Add((exit, AvailableKeys.Some));
+                    }
+                }
+
+                return possibleExits;
+            }
+
+            private AvailableKeys Lookahead(Exit exit, IReadOnlyList<char> collectedKeys)
+            {
+                var keysBehindExit = Map.Keys(CurrentArea, exit);
+
+                var uncollectedCount = 0;
+                var canCollectCount = 0;
+                foreach (var keyReq in keysBehindExit)
+                {
+                    if (collectedKeys.Contains(keyReq.Key))
+                    {
+                        continue;
+                    }
+
+                    uncollectedCount++;
+                    if (keyReq.RequiresKeys.All(rk => collectedKeys.Contains(rk)))
+                    {
+                        canCollectCount++;
+                    }
+                }
+
+                if (uncollectedCount == 0 || canCollectCount == 0)
+                {
+                    return AvailableKeys.None;
+                }
+                if (canCollectCount == uncollectedCount)
+                {
+                    return AvailableKeys.All;
+                }
+                return AvailableKeys.Some;
             }
         }
+
+        private enum AvailableKeys { None, Some, All };
 
         private class Step
         {
@@ -717,9 +787,9 @@ namespace AdventOfCode2019
         {
             public static KeyRequirementsLookup Create(Map map)
             {
-                var lookup = new Dictionary<AreaExitPair, IReadOnlyList<KeyRequirements>>();
+                var lookup = new Dictionary<(Area, Exit), IReadOnlyList<KeyRequirements>>();
 
-                var allPairs = map.Areas().SelectMany(area => area.Exits.Select(exit => new AreaExitPair(area, exit)));
+                var allPairs = map.Areas().SelectMany(area => area.Exits.Select(exit => (area, exit)));
                 foreach (var pair in allPairs)
                 {
                     SearchKeys(map, pair, lookup);
@@ -729,22 +799,22 @@ namespace AdventOfCode2019
             }
 
             private static IReadOnlyList<KeyRequirements> SearchKeys(
-                Map map, 
-                AreaExitPair from, 
-                Dictionary<AreaExitPair, IReadOnlyList<KeyRequirements>> lookup)
+                Map map,
+                (Area area, Exit exit) from, 
+                Dictionary<(Area, Exit), IReadOnlyList<KeyRequirements>> lookup)
             {
                 if (lookup.TryGetValue(from, out var existingRequirements))
                 {
                     return existingRequirements;
                 }
 
-                var area = map.AreaById(from.Exit.ToAreaId);
+                var area = map.AreaById(from.exit.ToAreaId);
 
                 var areaRequirements = area.ContainsKeys
                     .Select(key => new KeyRequirements(key, area.RequiresKeys));
 
-                var childRequirements = area.Exits.Where(e => e.ToAreaId != from.Area.Id)
-                    .Select(exit => new AreaExitPair(area, exit))
+                var childRequirements = area.Exits.Where(e => e.ToAreaId != from.area.Id)
+                    .Select(exit => (area, exit))
                     .SelectMany(p => SearchKeys(map, p, lookup))
                     .Select(r => new KeyRequirements(r.Key, r.RequiresKeys.Concat(area.RequiresKeys).ToList()));
 
@@ -753,36 +823,16 @@ namespace AdventOfCode2019
                 return requirements;
             }
 
-            private readonly IReadOnlyDictionary<AreaExitPair, IReadOnlyList<KeyRequirements>> lookup;
+            private readonly IReadOnlyDictionary<(Area, Exit), IReadOnlyList<KeyRequirements>> lookup;
 
             public KeyRequirementsLookup(
-                IReadOnlyDictionary<AreaExitPair, IReadOnlyList<KeyRequirements>> lookup)
+                IReadOnlyDictionary<(Area, Exit), IReadOnlyList<KeyRequirements>> lookup)
             {
                 this.lookup = lookup;
             }
 
             public IReadOnlyList<KeyRequirements> Keys(Area fromArea, Exit throughExit) => 
-                lookup[new AreaExitPair(fromArea, throughExit)];
-        }
-
-        private class AreaExitPair
-        {
-            public AreaExitPair(Area area, Exit exit)
-            {
-                this.Area = area;
-                this.Exit = exit;
-            }
-
-            public Area Area { get; }
-            public Exit Exit { get; }
-
-            public override bool Equals(object obj) =>
-                obj is AreaExitPair other ? Equals(other) : false;
-            
-            private bool Equals(AreaExitPair other) =>
-                Area.Id == other.Area.Id && Exit.ToAreaId == other.Exit.ToAreaId;
-
-            public override int GetHashCode() => HashCode.Combine(Area.Id, Exit.ToAreaId);
+                lookup[(fromArea, throughExit)];
         }
 
         private class KeyRequirements
@@ -796,5 +846,116 @@ namespace AdventOfCode2019
             public char Key { get; }
             public IReadOnlyList<char> RequiresKeys { get; }
         }
+
+        private class MultiPath
+        {
+            public static MultiPath Of(IReadOnlyList<Path> paths)
+            {
+                var totalKeys = paths.Select(p => p.Map.ContainsKeys.Count).Sum();
+                return new MultiPath(paths, totalKeys);
+            }
+
+            public MultiPath(IReadOnlyList<Path> paths, int totalKeys)
+            {
+                Paths = paths;
+                TotalKeys = totalKeys;
+
+                CollectedKeys = paths.SelectMany(p => p.CollectedKeys).ToList();
+                Distance = paths.Select(p => p.Distance).Sum();
+            }
+
+            public IReadOnlyList<Path> Paths { get; }
+            public int TotalKeys { get; }
+            public IReadOnlyList<char> CollectedKeys { get; }
+            public int Distance { get; }
+
+            public IReadOnlyList<MultiPath> PossibleNextPaths()
+            {
+                // Using LINQ in this method adds ~10 seconds to execution time.
+
+                var possiblePaths = new List<(int pathIndex, IReadOnlyList<(Exit exit, AvailableKeys availableKeys)> exits)>();
+                var index = 0;
+                foreach (var path in Paths)
+                {
+                    var exits = path.Lookahead(CollectedKeys);
+                    if (exits.Count == 0)
+                    {
+                        index++;
+                        continue;
+                    }
+
+                    if (exits.Count == 1 && exits[0].availableKeys == AvailableKeys.All)
+                    {
+                        return new[] { Go(index, exits[0].exit) };
+                    }
+
+                    possiblePaths.Add((index, exits));
+                    index++;
+                }
+
+                // If key was not picked up on a path, and next exit does not have a key 
+                // to collect, move there without considering any other paths/exits. This
+                // move would need to happen any way, so might as well take it. This cuts
+                // down on a lot of unnecessary branching when bruteforcing all move
+                // combinations.
+                foreach (var (pathIndex, exits) in possiblePaths)
+                {
+                    var path = Paths[pathIndex];
+                    if (path.KeysPickedUp)
+                    {
+                        continue;
+                    }
+
+                    foreach (var (exit, _) in exits)
+                    {
+                        var keys = path.Map.AreaById(exit.ToAreaId).ContainsKeys;
+                        if (keys.Count == 0 || keys.All(k => CollectedKeys.Contains(k)))
+                        {
+                            return new[] { Go(pathIndex, exit) };
+                        }
+                    }
+                }
+
+                var nextPaths = new List<MultiPath>();
+                foreach (var (pathIndex, exits) in possiblePaths)
+                {
+                    foreach (var (exit, _) in exits)
+                    {
+                        nextPaths.Add(Go(pathIndex, exit));
+                    }
+                }
+                return nextPaths;
+            }
+
+            public MultiPath Go(int pathIndex, Exit throughExit)
+            {
+                var newPaths = Paths.ToList();
+                newPaths[pathIndex] = Paths[pathIndex].Go(throughExit);
+                return new MultiPath(newPaths, TotalKeys);
+            }
+        }
+
+        private class Solution
+        {
+            public static readonly Solution Worst = 
+                new Solution(int.MaxValue, Array.Empty<char>());
+
+            public static Solution Of(Path path) => 
+                new Solution(path.Distance, path.CollectedKeys);
+
+            public static Solution Of(MultiPath path) =>
+                new Solution(path.Distance, path.CollectedKeys);
+
+            public Solution(int distance, IReadOnlyList<char> keys)
+            {
+                Distance = distance;
+                Keys = keys;
+            }
+
+            public int Distance { get; }
+            public IReadOnlyList<char> Keys { get; }
+
+            public override string ToString() => $"{Distance}, keys={string.Join("", Keys)}";
+        }        
     }
 }

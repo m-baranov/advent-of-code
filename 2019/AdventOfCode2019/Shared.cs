@@ -86,6 +86,29 @@ namespace AdventOfCode2019
             return options;
         }
 
+        public static IEnumerable<IReadOnlyList<T>> AllPossibleCombinations<T>(IReadOnlyList<IReadOnlyList<T>> choices)
+        {
+            static IEnumerable<IReadOnlyList<T>> Combine<T>(IEnumerable<IReadOnlyList<T>> xs, IReadOnlyList<T> ys)
+            {
+                return from x in xs
+                       from y in ys
+                       select x.Append(y).ToList();
+            }
+
+            if (choices.Count == 0)
+            {
+                return Array.Empty<IReadOnlyList<T>>();
+            }
+
+            var first = choices.First().Select(c => (IReadOnlyList<T>)(new[] { c }));
+            if (choices.Count == 1)
+            {
+                return first;
+            }
+
+            return choices.Skip(1).Aggregate(first, (acc, next) => Combine(acc, next));
+        }
+
         public static IEnumerable<IReadOnlyList<T>> Chunk<T>(this IEnumerable<T> items, int chunkSize)
         {
             var chunk = new List<T>(capacity: chunkSize);
@@ -104,6 +127,17 @@ namespace AdventOfCode2019
             {
                 yield return chunk;
             }
+        }
+    }
+
+    public static class DictionaryExtensions
+    {
+        public static TValue GetOrDefault<TKey, TValue>(
+            this IReadOnlyDictionary<TKey, TValue> dict, 
+            TKey key, 
+            TValue defaultValue)
+        {
+            return dict.TryGetValue(key, out var value) ? value : defaultValue;
         }
     }
 
