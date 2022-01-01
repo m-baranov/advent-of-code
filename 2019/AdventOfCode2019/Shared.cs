@@ -6,7 +6,7 @@ namespace AdventOfCode2019
 {
     public static class EnumerableExtensions
     {
-        public static IEnumerable<(T, T)> Pairwise<T>(this IEnumerable<T> items)
+        public static IEnumerable<(T first, T second)> Pairwise<T>(this IEnumerable<T> items)
         {
             return items.Zip(items.Skip(1), (first, second) => (first, second));
         }
