@@ -366,6 +366,11 @@ namespace AdventOfCode2019
                     this.values.Add(value);
                 }
 
+                public void Clear()
+                {
+                    this.values.Clear();
+                }
+
                 public IReadOnlyList<long> Values() => this.values;
 
                 public string AsciiText()
