@@ -87,6 +87,20 @@ namespace AdventOfCode2019
                 return clone;
             }
 
+            public (Result result, IReadOnlyList<long> output) ExecuteAndGetNewOutput()
+            {
+                var oldOutputCount = Output.Values().Count;
+
+                var result = Execute();
+
+                var output = Output.Values();
+                var newOutput = output.Count > oldOutputCount
+                    ? output.TakeLast(output.Count - oldOutputCount).ToArray()
+                    : Array.Empty<long>();
+
+                return (result, newOutput);
+            }
+
             public Result Execute()
             {
                 while (true)
