@@ -1,17 +1,17 @@
 ﻿using System;
 using System.Threading.Tasks;
 
-namespace AdventOfCode2017
+namespace AdventOfCode2023
 {
-    // https://adventofcode.com/2018
+    // https://adventofcode.com/2023
     class Program
     {
         static async Task Main(string[] args)
         {
             Input.HttpSession = Environment.GetEnvironmentVariable("ADVENT_OF_CODE_SESSION", EnvironmentVariableTarget.User);
 
-            var problem = new Day22.Part2();
-            await problem.Run(Day22.Inputs.Test);
+            var problem = new Day01.Part2();
+            await problem.Run(Day01.Inputs.Test);
 
             Console.ReadLine();
         }
