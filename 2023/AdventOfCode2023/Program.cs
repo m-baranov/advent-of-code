@@ -8,10 +8,10 @@ namespace AdventOfCode2023
     {
         static async Task Main(string[] args)
         {
-            Input.HttpSession = Environment.GetEnvironmentVariable("ADVENT_OF_CODE_SESSION", EnvironmentVariableTarget.User);
+            Input.HttpSession = Environment.GetEnvironmentVariable("ADVENT_OF_CODE_SESSION", EnvironmentVariableTarget.User)!;
 
-            var problem = new Day02.Part2();
-            await problem.Run(Day02.Inputs.Test);
+            var problem = new Day03.Part2();
+            await problem.Run(Day03.Inputs.Test);
 
             Console.ReadLine();
         }
