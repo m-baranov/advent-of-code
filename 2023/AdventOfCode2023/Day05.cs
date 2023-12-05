@@ -118,6 +118,7 @@ humidity-to-location map:
         {
             var remaining = range;
             var applied = new List<Range>();
+            var allRangeConsumed = false;
 
             foreach (var mapRange in map.Ranges.OrderBy(r => r.SourceStart))
             {
@@ -144,6 +145,7 @@ humidity-to-location map:
 
                 if (remaining.End <= source.End)
                 {
+                    allRangeConsumed = true;
                     break;
                 }
                 else
@@ -155,9 +157,9 @@ humidity-to-location map:
                 }
             }
 
-            if (applied.Count == 0)
+            if (!allRangeConsumed)
             {
-                applied.Add(range);
+                applied.Add(remaining);
             }
 
             return applied;
