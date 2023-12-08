@@ -227,5 +227,7 @@ namespace AdventOfCode2023
         }
 
         public static long Lcm(long a, long b) => Math.Abs(a * b) / Gcd(a, b);
+
+        public static long Lcm(IReadOnlyList<long> ns) => ns.Aggregate(Lcm);
     }
 }
