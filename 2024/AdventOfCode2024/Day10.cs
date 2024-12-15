@@ -150,7 +150,7 @@ static class Day10
         }
     }
 
-        private record Position(int Row, int Col)
+    private record Position(int Row, int Col)
     {
         public Position Add(Position p) =>
             new(p.Row + this.Row, p.Col + this.Col);
