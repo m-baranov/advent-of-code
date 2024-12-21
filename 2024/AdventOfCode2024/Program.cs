@@ -10,8 +10,12 @@ namespace AdventOfCode2024
         {
             Input.HttpSession = Environment.GetEnvironmentVariable("ADVENT_OF_CODE_SESSION", EnvironmentVariableTarget.User)!;
 
-            var problem = new Day15.Part1();
-            await problem.Run(Day15.Inputs.Test);
+            var problem = new Day20.Part1();
+            await problem.Run(Day20.Inputs.Test);
+
+            var problem2 = new Day20.Part2();
+            await problem2.Run(Day20.Inputs.Test);
+
 
             Console.ReadLine();
         }
