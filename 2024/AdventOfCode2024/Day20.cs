@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection.PortableExecutable;
-using System.Runtime.CompilerServices;
-using System.Threading.Channels;
 
 namespace AdventOfCode2024;
 
@@ -69,7 +65,6 @@ static class Day20
                 .Count();
 
             Console.WriteLine(count);
-
         }
     }
 
